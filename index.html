@@ -6,9 +6,9 @@
 <title>🍃 호두네 가계부</title>
 <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
-/* 1. 디자인 스타일 (민트색 테마) */
+/* 1. 디자인 (민트색 테마) */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
-body{font-family:'Nanum Gothic','Malgun Gothic',sans-serif;background:#A8E6CF;overflow-x:hidden}
+body{font-family:'Nanum Gothic',sans-serif;background:#A8E6CF;overflow-x:hidden}
 ::-webkit-scrollbar{display:none}
 .app{max-width:820px;margin:0 auto;min-height:100vh;padding-bottom:90px;
   background:linear-gradient(180deg,#A8E6CF 0%,#DCEDC1 15%,#FEFCF3 35%,#FFF8E7 100%);
@@ -29,17 +29,21 @@ body{font-family:'Nanum Gothic','Malgun Gothic',sans-serif;background:#A8E6CF;ov
 .stat-label{font-size:12px;font-weight:700;color:#795548}
 .stat-value{font-size:18px;font-weight:800;margin-top:4px}
 .txn-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:14px;margin-bottom:7px;background:#FFF8E7}
+/* 예산 막대 디자인 */
 .budget-row{margin-bottom:14px}
 .budget-header{display:flex;justify-content:space-between;margin-bottom:6px;font-size:14px;font-weight:700;color:#5D4037}
-.budget-track{height:18px;border-radius:9px;background:#E8DFC8;overflow:hidden}
-.budget-fill{height:100%;background:#43AA8B}
+.budget-track{height:18px;border-radius:9px;background:#E8DFC8;overflow:hidden;position:relative}
+.budget-fill{height:100%;background:#43AA8B;transition:width 0.5s ease}
+/* 저축 카드 디자인 */
 .savings-card{background:#fff;border-radius:14px;padding:16px;margin-bottom:10px;border:1px solid #E8DFC8;display:flex;justify-content:space-between;align-items:center}
+/* 탭바 디자인 */
 .tab-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:820px;
   background:#FEFCF3;padding:8px 24px 16px;z-index:10;border-top:1px solid #E8DFC8;display:flex;justify-content:space-around}
 .tab-btn{display:flex;flex-direction:column;align-items:center;border:none;background:none;cursor:pointer}
 .tab-icon{font-size:24px;margin-bottom:4px}
 .tab-label{font-size:11px;font-weight:700;color:#A1887F}
 .loading{padding:100px;text-align:center;font-weight:bold;color:#795548}
+.empty-msg{text-align:center;padding:30px;color:#A1887F;font-size:14px}
 </style>
 </head>
 <body>
@@ -59,9 +63,15 @@ body{font-family:'Nanum Gothic','Malgun Gothic',sans-serif;background:#A8E6CF;ov
 </div>
 
 <script>
-// 2. 데이터 처리 로직 (이게 있어야 예산이 나옵니다!)
+// 2. 데이터 처리 및 계산 로직 (여기가 업그레이드되었습니다!)
 const API_URL = "https://script.google.com/macros/s/AKfycbxar7X9K0bcG7T4Ll0x5CT8U7VwYLD-YT0Cmc2Qy7FqWKKDreN8wciEJlAEBGfplky2/exec";
 const MONTHS = ["01","02","03","04","05","06","07","08","09","10","11","12"];
+
+// 엑셀의 카테고리 이름과 매칭 (필요시 수정 가능)
+const CAT_MAP = {
+  "식비": "Groceries", "외식": "Dining", "반려동물": "Pet", 
+  "공과금": "Bill", "월세": "Rent", "주유": "Gas"
+};
 
 let state = {
   month: String(new Date().getMonth()+1).padStart(2,"0"),
@@ -78,12 +88,16 @@ async function fetchData() {
   try {
     const res = await fetch(API_URL);
     const data = await res.json();
-    if(data.transactions) state.transactions = data.transactions;
-    if(data.budget) state.budget = data.budget;
-    if(data.savings) state.savings = data.savings;
+    
+    // 데이터가 있으면 저장, 없으면 빈 배열
+    state.transactions = data.transactions || [];
+    state.budget = data.budget || [];
+    state.savings = data.savings || [];
+    
+    console.log("데이터 로드 성공:", state.transactions.length, "건");
   } catch(e) {
     console.error("Error:", e);
-    document.getElementById("content").innerHTML = '<div class="loading">⚠️ 데이터 연결 실패</div>';
+    document.getElementById("content").innerHTML = '<div class="loading">⚠️ 데이터 연결 실패<br><span style="font-size:12px">잠시 후 다시 시도해주세요</span></div>';
   } finally {
     state.loading = false;
     render();
@@ -99,7 +113,7 @@ function render() {
   const content = document.getElementById("content");
   
   if(state.loading) {
-    content.innerHTML = '<div class="loading">🍃 로딩 중...<br><span style="font-size:12px">잠시만 기다려주세요</span></div>';
+    content.innerHTML = '<div class="loading">🍃 로딩 중...<br><span style="font-size:12px">데이터를 불러오고 있어요</span></div>';
     return;
   }
 
@@ -111,7 +125,7 @@ function render() {
 
   // 탭별 내용 그리기
   if (state.tab === "home") {
-    // 홈 화면 계산
+    // [홈 화면]
     const txs = state.transactions.filter(t => t.m === state.month);
     const inc = txs.filter(t => t.t === "수입").reduce((s,t) => s + t.amt, 0);
     const exp = txs.filter(t => t.t === "지출").reduce((s,t) => s + t.amt, 0);
@@ -135,34 +149,52 @@ function render() {
               ${t.t==='지출'?'-':t.t==='수입'?'+':'→'} ${$(t.amt)}
             </div>
            </div>`
-        ).join("") : '<div style="text-align:center;padding:20px;color:#999">내역이 없습니다.</div>'}
+        ).join("") : '<div class="empty-msg">내역이 없습니다.</div>'}
       </div>
     `;
 
   } else if (state.tab === "budget") {
-    // 예산 화면 (여기가 안 나왔었음)
+    // [예산 화면] - 여기가 핵심 수정됨!
+    // 1. 이번 달 지출 내역만 가져옵니다.
+    const currentMonthTxns = state.transactions.filter(t => t.m === state.month && t.t === "지출");
+    
+    // 2. 카테고리별로 합산합니다 (계산기 기능)
+    const spentMap = {};
+    currentMonthTxns.forEach(t => {
+      // 엑셀의 '지출_Groceries' 등에서 앞에 '지출_'을 떼거나 그대로 사용
+      let key = t.cat.replace("지출_", "").replace("고정_", "");
+      spentMap[key] = (spentMap[key] || 0) + t.amt;
+      // 한글 이름인 경우도 대비해서 원본 이름으로도 저장
+      spentMap[t.cat] = (spentMap[t.cat] || 0) + t.amt;
+    });
+
+    // 3. 예산 목표와 비교해서 그립니다.
     content.innerHTML = `
       <div class="card">
-        <div class="card-title">📊 예산 현황</div>
+        <div class="card-title">📊 ${parseInt(state.month)}월 예산 현황</div>
         ${state.budget.length ? state.budget.map(b => {
-          const pct = Math.min((b.spent / b.target) * 100, 100);
+          // 예산 항목 이름(b.category)과 일치하는 지출 합계를 찾습니다.
+          const catName = b.category;
+          const spent = spentMap[catName] || 0; 
+          const pct = b.target > 0 ? Math.min((spent / b.target) * 100, 100) : 0;
+          
           return `
             <div class="budget-row">
               <div class="budget-header">
-                <span>${b.category}</span>
-                <span>${$(b.spent)} / ${$(b.target)}</span>
+                <span>${catName}</span>
+                <span>${$(spent)} / ${$(b.target)}</span>
               </div>
               <div class="budget-track">
                 <div class="budget-fill" style="width:${pct}%; background:${pct>=100?'#E74C3C':'#43AA8B'}"></div>
               </div>
             </div>
           `;
-        }).join("") : '<div style="text-align:center;padding:20px">예산 데이터가 없습니다.</div>'}
+        }).join("") : '<div class="empty-msg">설정된 예산 목표가 없습니다.</div>'}
       </div>
     `;
 
   } else if (state.tab === "savings") {
-    // 저축 화면 (여기도 안 나왔었음)
+    // [저축 화면]
     const total = state.savings.reduce((s, item) => s + item.balance, 0);
     content.innerHTML = `
       <div class="card" style="background:#43AA8B;color:#fff;text-align:center">
@@ -176,7 +208,7 @@ function render() {
              <div style="font-weight:700;color:#5D4037">${s.name}</div>
              <div style="font-weight:800;color:#2E7D32">${$(s.balance)}</div>
            </div>`
-        ).join("") : '<div style="text-align:center;padding:20px">저축 데이터가 없습니다.</div>'}
+        ).join("") : '<div class="empty-msg">저축 계좌 정보가 없습니다.</div>'}
       </div>
     `;
   }
