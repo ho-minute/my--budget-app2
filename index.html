@@ -525,6 +525,14 @@ renderLeaves();
 renderGreeting();
 fetchData();
 setInterval(fetchData, 5*60*1000); // 5분마다 자동 새로고침
+const bgm = new Audio('bmg.mp3'); 
+  bgm.loop = true;
+
+  document.addEventListener('click', function() {
+    if (bgm.paused) {
+      bgm.play().catch(e => console.log("재생 오류:", e));
+    }
+  }, { once: true });                      
 </script>
 </body>
 </html>
