@@ -6,71 +6,126 @@
 <title>🍃 호두네 가계부</title>
 <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
-/* 1. 디자인 (민트색 테마) */
+/* 원본 budget-app.jsx의 스타일을 그대로 가져왔습니다 */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
 body{font-family:'Nanum Gothic',sans-serif;background:#A8E6CF;overflow-x:hidden}
 ::-webkit-scrollbar{display:none}
+
+/* 낙엽 애니메이션 */
+@keyframes leafFall{0%{transform:translateY(-10px) rotate(0);opacity:0}10%{opacity:0.6}90%{opacity:0.6}100%{transform:translateY(100vh) rotate(360deg);opacity:0}}
+
 .app{max-width:820px;margin:0 auto;min-height:100vh;padding-bottom:90px;
   background:linear-gradient(180deg,#A8E6CF 0%,#DCEDC1 15%,#FEFCF3 35%,#FFF8E7 100%);
   position:relative;overflow:hidden}
-.header{position:relative;z-index:1;padding:22px 24px 12px}
+
+.leaves{position:fixed;inset:0;pointer-events:none;z-index:0}
+.leaf{position:absolute;top:-30px;opacity:0.6}
+
+.header{position:relative;z-index:1;padding:24px 24px 12px}
+.header-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .title{font-size:24px;font-weight:800;color:#4E342E}
-.month-bar{display:flex;gap:6px;overflow-x:auto;padding-bottom:5px;margin-top:10px}
-.month-btn{padding:7px 16px;border-radius:20px;cursor:pointer;font-weight:700;font-size:13px;
-  white-space:nowrap;flex-shrink:0;font-family:inherit;transition:all .2s ease;border:1.5px solid #E8DFC8;
-  background:#FFF8E7;color:#795548}
-.month-btn.active{background:linear-gradient(135deg,#7BC67E,#43AA8B);color:#fff;
-  box-shadow:0 2px 8px rgba(67,170,139,0.3);border:none}
+.greeting{font-size:13px;color:#795548;font-weight:600;margin-bottom:4px}
+.sync-btn{background:#E8F5E9;border:1px solid #A5D6A7;color:#2E7D32;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer}
+
+.month-bar{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px}
+.month-btn{padding:8px 16px;border-radius:20px;font-size:13px;font-weight:700;border:1.5px solid #E8DFC8;background:#FFF8E7;color:#795548;white-space:nowrap;cursor:pointer}
+.month-btn.active{background:linear-gradient(135deg,#7BC67E,#43AA8B);color:#fff;border:none;box-shadow:0 2px 8px rgba(67,170,139,0.3)}
+
 .content{position:relative;z-index:1;padding:0 24px}
-.card{background:#FEFCF3;border-radius:20px;padding:22px;margin-bottom:16px;border:2px solid #E8DFC8}
-.card-title{font-size:16px;font-weight:700;color:#5D4037;margin-bottom:14px}
+.card{background:#FEFCF3;border-radius:20px;padding:24px;margin-bottom:16px;border:2px solid #E8DFC8}
+.card-title{font-size:16px;font-weight:700;color:#5D4037;margin-bottom:16px;display:flex;align-items:center;gap:6px}
+
+/* 요약 카드 그리드 */
 .stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-.stat-box{border-radius:14px;padding:14px;text-align:center;background:#fff;border:1px solid #eee}
-.stat-label{font-size:12px;font-weight:700;color:#795548}
-.stat-value{font-size:18px;font-weight:800;margin-top:4px}
-.txn-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:14px;margin-bottom:7px;background:#FFF8E7}
-/* 예산 막대 디자인 */
-.budget-row{margin-bottom:14px}
-.budget-header{display:flex;justify-content:space-between;margin-bottom:6px;font-size:14px;font-weight:700;color:#5D4037}
-.budget-track{height:18px;border-radius:9px;background:#E8DFC8;overflow:hidden;position:relative}
-.budget-fill{height:100%;background:#43AA8B;transition:width 0.5s ease}
-/* 저축 카드 디자인 */
-.savings-card{background:#fff;border-radius:14px;padding:16px;margin-bottom:10px;border:1px solid #E8DFC8;display:flex;justify-content:space-between;align-items:center}
-/* 탭바 디자인 */
-.tab-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:820px;
-  background:#FEFCF3;padding:8px 24px 16px;z-index:10;border-top:1px solid #E8DFC8;display:flex;justify-content:space-around}
-.tab-btn{display:flex;flex-direction:column;align-items:center;border:none;background:none;cursor:pointer}
-.tab-icon{font-size:24px;margin-bottom:4px}
-.tab-label{font-size:11px;font-weight:700;color:#A1887F}
-.loading{padding:100px;text-align:center;font-weight:bold;color:#795548}
-.empty-msg{text-align:center;padding:30px;color:#A1887F;font-size:14px}
+.stat-box{background:rgba(255,255,255,0.5);border:1px solid rgba(0,0,0,0.05);border-radius:16px;padding:16px;text-align:center}
+.stat-label{font-size:12px;font-weight:600;color:#795548;margin-bottom:4px}
+.stat-val{font-size:18px;font-weight:800;color:#4E342E}
+
+/* 거래 내역 리스트 */
+.txn-row{display:flex;align-items:center;gap:12px;padding:12px;background:#FFF8E7;border-radius:12px;margin-bottom:8px}
+.txn-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.txn-info{flex:1}
+.txn-desc{font-size:14px;font-weight:700;color:#4E342E}
+.txn-sub{font-size:11px;color:#A1887F;margin-top:2px}
+.txn-amt{font-size:15px;font-weight:800}
+
+/* 예산 막대 */
+.budget-row{margin-bottom:16px}
+.budget-head{display:flex;justify-content:space-between;margin-bottom:6px;font-size:14px;font-weight:700;color:#5D4037}
+.budget-track{height:16px;background:#E8DFC8;border-radius:8px;overflow:hidden}
+.budget-fill{height:100%;border-radius:8px;transition:width 0.5s ease}
+
+/* 저축 탭 */
+.savings-hero{background:linear-gradient(135deg,#43AA8B,#2A9D8F);color:white;padding:24px;border-radius:20px;text-align:center;margin-bottom:16px;box-shadow:0 4px 12px rgba(42,157,143,0.3)}
+.savings-item{background:#FFF;border:1px solid #E8DFC8;border-radius:16px;padding:16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.wire-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.wire-box{background:#FFF8E7;border:1px solid #E8DFC8;border-radius:12px;padding:12px;text-align:center}
+
+/* 탭 바 */
+.tab-bar{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);width:calc(100% - 48px);max-width:772px;
+  background:rgba(255,255,255,0.9);backdrop-filter:blur(10px);border-radius:24px;padding:12px;
+  display:flex;justify-content:space-around;box-shadow:0 4px 20px rgba(0,0,0,0.08);z-index:100;border:1px solid #E8DFC8}
+.tab-btn{border:none;background:none;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;opacity:0.5;transition:all 0.2s}
+.tab-btn.active{opacity:1;transform:scale(1.1)}
+.tab-icon{font-size:24px}
+.tab-label{font-size:10px;font-weight:700;color:#5D4037}
+
+.loading{padding:60px;text-align:center;color:#795548;font-weight:700}
 </style>
 </head>
 <body>
 
 <div class="app" id="app">
+  <div class="leaves" id="leaves"></div>
+  
   <div class="header">
-    <div class="title">🍃 호두네 가계부</div>
+    <div class="header-top">
+      <div>
+        <div class="greeting" id="greeting"></div>
+        <div class="title">🍃 호두네 가계부</div>
+      </div>
+      <button class="sync-btn" onclick="fetchData()">🔄 동기화</button>
+    </div>
     <div class="month-bar" id="month-bar"></div>
   </div>
+
   <div class="content" id="content"></div>
-  
+
   <div class="tab-bar">
     <button class="tab-btn" onclick="setTab('home')"><span class="tab-icon">🏠</span><span class="tab-label">홈</span></button>
     <button class="tab-btn" onclick="setTab('budget')"><span class="tab-icon">📊</span><span class="tab-label">예산</span></button>
+    <button class="tab-btn" onclick="setTab('list')"><span class="tab-icon">📋</span><span class="tab-label">내역</span></button>
     <button class="tab-btn" onclick="setTab('savings')"><span class="tab-icon">🏝️</span><span class="tab-label">저축</span></button>
   </div>
 </div>
 
 <script>
-// 2. 데이터 처리 및 계산 로직 (여기가 업그레이드되었습니다!)
+// 1. 원본 설정값 복원
 const API_URL = "https://script.google.com/macros/s/AKfycbxar7X9K0bcG7T4Ll0x5CT8U7VwYLD-YT0Cmc2Qy7FqWKKDreN8wciEJlAEBGfplky2/exec";
 const MONTHS = ["01","02","03","04","05","06","07","08","09","10","11","12"];
 
-// 엑셀의 카테고리 이름과 매칭 (필요시 수정 가능)
+// 원본 코드에 있던 카테고리 매핑 (이게 있어야 예산이 잡힙니다!)
 const CAT_MAP = {
-  "식비": "Groceries", "외식": "Dining", "반려동물": "Pet", 
-  "공과금": "Bill", "월세": "Rent", "주유": "Gas"
+  "지출_Groceries": {label:"식료품", icon:"🍎", color:"#7BC67E"},
+  "지출_Dining": {label:"외식", icon:"🍽️", color:"#F4A261"},
+  "지출_Pet": {label:"호두", icon:"🐱", color:"#E9C46A"},
+  "고정_Bill": {label:"공과금", icon:"📱", color:"#264653"},
+  "고정_Rent": {label:"렌트", icon:"🏠", color:"#2A9D8F"},
+  "지출_Household": {label:"생필품", icon:"🏡", color:"#E76F51"},
+  "지출_Gas": {label:"주유", icon:"⛽", color:"#606C38"},
+  "병원": {label:"병원", icon:"🏥", color:"#BC6C25"},
+  "용돈": {label:"용돈", icon:"💸", color:"#DDA15E"},
+  "쇼핑": {label:"쇼핑", icon:"🛍️", color:"#CDB4DB"},
+  "문화생활": {label:"문화생활", icon:"🎬", color:"#A2D2FF"},
+  "수입_새롬": {label:"월급", icon:"💵", color:"#90BE6D"},
+  "저축": {label:"저축", icon:"💰", color:"#43AA8B"}
+};
+
+// 예산 계산용 매핑
+const BUDGET_CAT_MAP = {
+  "지출_Groceries": "Groceries", "지출_Dining": "Dining", "지출_Pet": "Pet",
+  "고정_Bill": "Bill", "고정_Rent": "Rent", "지출_Household": "생필품", "지출_Gas": "Gas",
+  "병원": "병원", "용돈": "용돈", "쇼핑": "쇼핑", "문화생활": "문화생활"
 };
 
 let state = {
@@ -79,25 +134,24 @@ let state = {
   transactions: [],
   budget: [],
   savings: [],
+  wire: [],
   loading: true
 };
 
-// 데이터 가져오기
+function $(n) { return "$" + Number(n).toLocaleString(); }
+
+// 2. 데이터 불러오기
 async function fetchData() {
   state.loading = true; render();
   try {
     const res = await fetch(API_URL);
     const data = await res.json();
-    
-    // 데이터가 있으면 저장, 없으면 빈 배열
     state.transactions = data.transactions || [];
     state.budget = data.budget || [];
     state.savings = data.savings || [];
-    
-    console.log("데이터 로드 성공:", state.transactions.length, "건");
+    state.wire = data.wire || []; // 와이어바일리 데이터 추가
   } catch(e) {
-    console.error("Error:", e);
-    document.getElementById("content").innerHTML = '<div class="loading">⚠️ 데이터 연결 실패<br><span style="font-size:12px">잠시 후 다시 시도해주세요</span></div>';
+    console.error(e);
   } finally {
     state.loading = false;
     render();
@@ -105,27 +159,35 @@ async function fetchData() {
 }
 
 function setMonth(m) { state.month = m; render(); }
-function setTab(t) { state.tab = t; render(); window.scrollTo(0,0); }
-function $(n) { return "$" + Number(n).toLocaleString(); }
+function setTab(t) { 
+  state.tab = t; 
+  // 탭 변경 시 버튼 활성화 상태 업데이트
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.tab-btn[onclick="setTab('${t}')"]`).classList.add('active');
+  render(); 
+  window.scrollTo(0,0); 
+}
 
-// 화면 그리기 (렌더링)
+// 3. 화면 그리기 (렌더링)
 function render() {
   const content = document.getElementById("content");
   
+  // 인사말 설정
+  const hour = new Date().getHours();
+  document.getElementById("greeting").innerText = hour < 12 ? "좋은 아침이에요 ☀️" : hour < 18 ? "좋은 오후예요 🌤️" : "좋은 저녁이에요 🌙";
+
+  // 월 버튼 그리기
+  document.getElementById("month-bar").innerHTML = MONTHS.map(m => 
+    `<button class="month-btn ${state.month===m?'active':''}" onclick="setMonth('${m}')">${parseInt(m)}월</button>`
+  ).join("");
+
   if(state.loading) {
-    content.innerHTML = '<div class="loading">🍃 로딩 중...<br><span style="font-size:12px">데이터를 불러오고 있어요</span></div>';
+    content.innerHTML = '<div class="loading">🍃 데이터를 불러오는 중...</div>';
     return;
   }
 
-  // 월 선택 버튼 그리기
-  const monthHtml = MONTHS.map(m => 
-    `<button class="month-btn ${state.month===m?'active':''}" onclick="setMonth('${m}')">${parseInt(m)}월</button>`
-  ).join("");
-  document.getElementById("month-bar").innerHTML = monthHtml;
-
-  // 탭별 내용 그리기
+  // 탭별 화면 구성
   if (state.tab === "home") {
-    // [홈 화면]
     const txs = state.transactions.filter(t => t.m === state.month);
     const inc = txs.filter(t => t.t === "수입").reduce((s,t) => s + t.amt, 0);
     const exp = txs.filter(t => t.t === "지출").reduce((s,t) => s + t.amt, 0);
@@ -135,97 +197,127 @@ function render() {
       <div class="card">
         <div class="card-title">📅 ${parseInt(state.month)}월 요약</div>
         <div class="stat-grid">
-          <div class="stat-box"><div class="stat-label">수입</div><div class="stat-value" style="color:#2E7D32">${$(inc)}</div></div>
-          <div class="stat-box"><div class="stat-label">지출</div><div class="stat-value" style="color:#C62828">${$(exp)}</div></div>
-          <div class="stat-box"><div class="stat-label">저축</div><div class="stat-value" style="color:#1565C0">${$(sav)}</div></div>
+          <div class="stat-box"><div class="stat-label">수입</div><div class="stat-val" style="color:#2E7D32">${$(inc)}</div></div>
+          <div class="stat-box"><div class="stat-label">지출</div><div class="stat-val" style="color:#C62828">${$(exp)}</div></div>
+          <div class="stat-box"><div class="stat-label">저축</div><div class="stat-val" style="color:#1565C0">${$(sav)}</div></div>
         </div>
       </div>
       <div class="card">
         <div class="card-title">🧾 최근 내역</div>
-        ${txs.length ? txs.slice(0, 5).map(t => 
-          `<div class="txn-row">
-            <div style="font-weight:700;flex:1">${t.desc}</div>
-            <div style="font-weight:700;color:${t.t==='지출'?'#C62828':t.t==='수입'?'#2E7D32':'#1565C0'}">
-              ${t.t==='지출'?'-':t.t==='수입'?'+':'→'} ${$(t.amt)}
-            </div>
-           </div>`
-        ).join("") : '<div class="empty-msg">내역이 없습니다.</div>'}
+        ${txs.length ? txs.slice(0, 5).map(renderTxnRow).join("") : '<div style="text-align:center;color:#999;padding:20px">내역이 없습니다.</div>'}
       </div>
     `;
 
   } else if (state.tab === "budget") {
-    // [예산 화면] - 여기가 핵심 수정됨!
-    // 1. 이번 달 지출 내역만 가져옵니다.
-    const currentMonthTxns = state.transactions.filter(t => t.m === state.month && t.t === "지출");
-    
-    // 2. 카테고리별로 합산합니다 (계산기 기능)
+    // 예산 계산 (원본 로직 복원)
+    const txs = state.transactions.filter(t => t.m === state.month && t.t === "지출");
     const spentMap = {};
-    currentMonthTxns.forEach(t => {
-      // 엑셀의 '지출_Groceries' 등에서 앞에 '지출_'을 떼거나 그대로 사용
-      let key = t.cat.replace("지출_", "").replace("고정_", "");
+    txs.forEach(t => {
+      const key = BUDGET_CAT_MAP[t.cat] || t.cat;
       spentMap[key] = (spentMap[key] || 0) + t.amt;
-      // 한글 이름인 경우도 대비해서 원본 이름으로도 저장
-      spentMap[t.cat] = (spentMap[t.cat] || 0) + t.amt;
     });
 
-    // 3. 예산 목표와 비교해서 그립니다.
     content.innerHTML = `
       <div class="card">
-        <div class="card-title">📊 ${parseInt(state.month)}월 예산 현황</div>
+        <div class="card-title">📊 예산 현황</div>
         ${state.budget.length ? state.budget.map(b => {
-          // 예산 항목 이름(b.category)과 일치하는 지출 합계를 찾습니다.
-          const catName = b.category;
-          const spent = spentMap[catName] || 0; 
+          const spent = spentMap[b.category] || 0;
           const pct = b.target > 0 ? Math.min((spent / b.target) * 100, 100) : 0;
-          
+          const isOver = spent > b.target;
           return `
             <div class="budget-row">
-              <div class="budget-header">
-                <span>${catName}</span>
-                <span>${$(spent)} / ${$(b.target)}</span>
+              <div class="budget-head">
+                <span>${CAT_MAP[`지출_${b.category}`]?.icon || "🏷️"} ${b.category}</span>
+                <span style="color:${isOver ? '#C62828' : '#5D4037'}">${$(spent)} / ${$(b.target)}</span>
               </div>
               <div class="budget-track">
-                <div class="budget-fill" style="width:${pct}%; background:${pct>=100?'#E74C3C':'#43AA8B'}"></div>
+                <div class="budget-fill" style="width:${pct}%; background:${isOver ? '#E74C3C' : '#43AA8B'}"></div>
               </div>
             </div>
           `;
-        }).join("") : '<div class="empty-msg">설정된 예산 목표가 없습니다.</div>'}
+        }).join("") : '예산 데이터가 없습니다.'}
       </div>
     `;
 
+  } else if (state.tab === "list") {
+    const txs = state.transactions.filter(t => t.m === state.month);
+    content.innerHTML = `<div class="card"><div class="card-title">📋 전체 내역</div>${txs.map(renderTxnRow).join("")}</div>`;
+
   } else if (state.tab === "savings") {
-    // [저축 화면]
-    const total = state.savings.reduce((s, item) => s + item.balance, 0);
+    const total = state.savings.reduce((s, i) => s + i.balance, 0);
+    const wire = state.wire[state.wire.length - 1] || {}; // 최근 송금 내역
+
     content.innerHTML = `
-      <div class="card" style="background:#43AA8B;color:#fff;text-align:center">
+      <div class="savings-hero">
         <div style="font-size:14px;opacity:0.9">총 자산</div>
-        <div style="font-size:28px;font-weight:800;margin-top:5px">${$(total)}</div>
+        <div style="font-size:32px;font-weight:800;margin-top:8px">${$(total)}</div>
+        <div style="margin-top:12px;font-size:13px">2026 목표: $20,000 💪</div>
       </div>
       <div class="card">
         <div class="card-title">🏝️ 계좌별 현황</div>
-        ${state.savings.length ? state.savings.map(s => 
-          `<div class="savings-card">
-             <div style="font-weight:700;color:#5D4037">${s.name}</div>
-             <div style="font-weight:800;color:#2E7D32">${$(s.balance)}</div>
-           </div>`
-        ).join("") : '<div class="empty-msg">저축 계좌 정보가 없습니다.</div>'}
+        ${state.savings.map(s => `
+          <div class="savings-item">
+            <div style="font-weight:700;color:#5D4037">${s.name}</div>
+            <div style="font-weight:800;color:#2E7D32">${$(s.balance)}</div>
+          </div>
+        `).join("")}
+      </div>
+      <div class="card">
+        <div class="card-title">🌏 와이어바일리</div>
+        <div class="wire-grid">
+          <div class="wire-box">
+            <div style="font-size:11px;color:#A1887F">🇰🇷 하나은행</div>
+            <div style="font-weight:800;color:#5D4037;margin-top:4px">₩${(wire.hana_remaining||0).toLocaleString()}</div>
+          </div>
+          <div class="wire-box">
+            <div style="font-size:11px;color:#A1887F">🇺🇸 체이스</div>
+            <div style="font-weight:800;color:#5D4037;margin-top:4px">${$(wire.chase_saving||0)}</div>
+          </div>
+        </div>
       </div>
     `;
   }
 }
 
-// 초기 실행
-fetchData();
-setInterval(fetchData, 300000); // 5분마다 자동 갱신
+function renderTxnRow(t) {
+  const meta = CAT_MAP[t.cat] || {label:t.cat, icon:"📌", color:"#ddd"};
+  const color = t.t === "수입" ? "#2E7D32" : t.t === "지출" ? "#C62828" : "#1565C0";
+  const sign = t.t === "수입" ? "+" : t.t === "지출" ? "-" : "";
+  
+  return `
+    <div class="txn-row">
+      <div class="txn-icon" style="background:${meta.color}33">${meta.icon}</div>
+      <div class="txn-info">
+        <div class="txn-desc">${t.desc}</div>
+        <div class="txn-sub">${meta.label} · ${t.date?.split("T")[0] || ""}</div>
+      </div>
+      <div class="txn-amt" style="color:${color}">${sign}${$(t.amt)}</div>
+    </div>
+  `;
+}
 
-// 3. 브금 재생 로직 (bgm.mp3)
+// 4. 낙엽 애니메이션 생성
+function initLeaves() {
+  const container = document.getElementById("leaves");
+  const emojis = ["🍃", "🍂", "🌿", "✨"];
+  container.innerHTML = Array(10).fill(0).map(() => {
+    const left = Math.random() * 100;
+    const delay = Math.random() * 5;
+    const duration = 8 + Math.random() * 5;
+    const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+    return `<div class="leaf" style="left:${left}%;animation:leafFall ${duration}s linear ${delay}s infinite;font-size:${14+Math.random()*10}px">${emoji}</div>`;
+  }).join("");
+}
+
+// 초기화 실행
+initLeaves();
+fetchData();
+document.querySelector('.tab-btn').classList.add('active'); // 첫 탭 활성화
+
+// 🎵 BGM 재생
 const bgm = new Audio('bgm.mp3');
 bgm.loop = true;
-document.addEventListener('click', function() {
-  if (bgm.paused) {
-    bgm.play().catch(e => console.log("Audio Error:", e));
-  }
-}, { once: true });
+document.addEventListener('click', () => { if(bgm.paused) bgm.play(); }, { once: true });
 </script>
 </body>
 </html>
