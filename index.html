@@ -154,7 +154,7 @@ function render() {
 
   const txs = state.data.transactions.filter(t => t.m === state.month);
   
-  // 1. 홈 탭 (달력 + 요약)
+  // 1. 홈 탭 (위치 변경됨: 현황 위로, 달력 아래로)
   if (state.tab === "home") {
     const inc = txs.filter(t=>t.t==="수입").reduce((a,b)=>a+b.amt,0);
     const exp = txs.filter(t=>t.t==="지출").reduce((a,b)=>a+b.amt,0);
@@ -162,16 +162,16 @@ function render() {
     
     content.innerHTML = `
       <div class="card">
-        <div class="card-title">📅 ${parseInt(state.month)}월 달력</div>
-        ${renderCalendar(state.month, txs)}
-      </div>
-      <div class="card">
         <div class="card-title">📊 이번 달 현황</div>
         <div class="stat-grid">
           <div class="stat-box"><div class="stat-label">수입</div><div class="stat-value" style="color:#2E7D32">${$(inc)}</div></div>
           <div class="stat-box"><div class="stat-label">지출</div><div class="stat-value" style="color:#C62828">${$(exp)}</div></div>
           <div class="stat-box"><div class="stat-label">저축</div><div class="stat-value" style="color:#1565C0">${$(sav)}</div></div>
         </div>
+      </div>
+      <div class="card">
+        <div class="card-title">📅 ${parseInt(state.month)}월 달력</div>
+        ${renderCalendar(state.month, txs)}
       </div>
     `;
   } 
