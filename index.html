@@ -196,8 +196,8 @@ function render() {
   else if (state.tab === "budget") {
     // 수입 분리 로직
     const incomeTxs = txs.filter(t=>t.t==="수입");
-    const incHomin = incomeTxs.filter(t=>t.pay && t.pay.includes("호민")).reduce((a,b)=>a+b.amt,0);
-    const incSaerom = incomeTxs.filter(t=>t.pay && t.pay.includes("새롬")).reduce((a,b)=>a+b.amt,0);
+    const incHomin = incomeTxs.filter(t=>t.cat && t.cat.includes("호민")).reduce((a,b)=>a+b.amt,0);
+    const incSaerom = incomeTxs.filter(t=>t.cat && t.cat.includes("새롬")).reduce((a,b)=>a+b.amt,0);
     const incTotal = incomeTxs.reduce((a,b)=>a+b.amt,0);
     const incOther = incTotal - incHomin - incSaerom;
 
