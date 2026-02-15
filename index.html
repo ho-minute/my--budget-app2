@@ -25,13 +25,17 @@ body{font-family:'Nanum Gothic',sans-serif;background:#A8E6CF;overflow-x:hidden}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
 .card{background:#FEFCF3;border-radius:22px;padding:22px;margin-bottom:16px;border:2px solid #E8DFC8;box-shadow:0 4px 10px rgba(0,0,0,0.03)}
-.card-title{font-size:16px;font-weight:800;color:#5D4037;margin-bottom:16px;display:flex;align-items:center;gap:6px}
+.card-title{font-size:16px;font-weight:800;color:#5D4037;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
 
 /* 통계 그리드 */
 .stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .stat-box{background:#fff;border-radius:16px;padding:14px;text-align:center;border:1px solid #F0E8D0}
 .stat-label{font-size:11px;font-weight:700;color:#A1887F;margin-bottom:4px}
 .stat-value{font-size:16px;font-weight:800;color:#4E342E}
+
+/* 수입 상세 박스 */
+.income-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed #E8DFC8;font-size:14px}
+.income-row:last-child{border-bottom:none;font-weight:800;color:#2E7D32;padding-top:12px;margin-top:4px;border-top:2px solid #E8DFC8}
 
 /* 달력 스타일 */
 .calendar-grid{display:grid;grid-template-columns:repeat(7, 1fr);gap:4px;text-align:center}
@@ -44,7 +48,6 @@ body{font-family:'Nanum Gothic',sans-serif;background:#A8E6CF;overflow-x:hidden}
 /* 분석 랭킹 스타일 */
 .rank-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px dashed #E8DFC8}
 .rank-row:last-child{border-bottom:none}
-.rank-info{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#5D4037}
 .rank-bar-bg{flex:1;height:8px;background:#F0E8D0;border-radius:4px;margin:0 12px;overflow:hidden}
 .rank-bar-fill{height:100%;border-radius:4px}
 
@@ -64,7 +67,6 @@ body{font-family:'Nanum Gothic',sans-serif;background:#A8E6CF;overflow-x:hidden}
 .tab-label{font-size:10px;font-weight:700;color:#5D4037}
 
 .loading{padding:60px;text-align:center;color:#795548;font-weight:bold}
-.hidden{display:none}
 </style>
 </head>
 <body>
@@ -88,21 +90,21 @@ body{font-family:'Nanum Gothic',sans-serif;background:#A8E6CF;overflow-x:hidden}
 const API_URL = "https://script.google.com/macros/s/AKfycbxar7X9K0bcG7T4Ll0x5CT8U7VwYLD-YT0Cmc2Qy7FqWKKDreN8wciEJlAEBGfplky2/exec";
 const MONTHS = ["01","02","03","04","05","06","07","08","09","10","11","12"];
 
-// 1. 카테고리 & 이모지 매핑 (Household, 호콤용돈 추가 완료)
+// 1. 카테고리 & 이모지 매핑 (Household 복구 완료!)
 const CAT_MAP = {
   "Groceries":"🍎 식료품", "Dining":"🍽️ 외식", "Pet":"🐱 호두",
-  "Bill":"📱 공과금", "Rent":"🏠 월세", "생필품":"🏡 생필품", "Household":"🏡 생필품",
+  "Bill":"📱 공과금", "Rent":"🏠 월세", "생필품":"🧻 생필품", "Household":"🏡 Household",
   "Gas":"⛽ 주유", "병원":"🏥 병원", "용돈":"💸 용돈", "호콤용돈":"🎮 호콤용돈",
   "쇼핑":"🛍️ 쇼핑", "문화생활":"🎬 문화", "기타":"📦 기타"
 };
 const COLOR_MAP = {
   "Groceries":"#FF6B6B", "Dining":"#FFA502", "Pet":"#ECCC68",
-  "Bill":"#70A1FF", "Rent":"#5352ED", "생필품":"#FF7F50", "Household":"#FF7F50",
+  "Bill":"#70A1FF", "Rent":"#5352ED", "생필품":"#FF7F50", "Household":"#FF9F43",
   "Gas":"#3742FA", "병원":"#FF4757", "용돈":"#2ED573", "호콤용돈":"#706FD3",
   "쇼핑":"#E056FD", "문화생활":"#1E90FF", "기타":"#CED6E0"
 };
 
-// 2026년 월급날 (2주 간격 목요일)
+// 2. 2026년 월급날 (2주 간격 목요일)
 const PAYDAYS = [
   "2026-01-08","2026-01-22","2026-02-05","2026-02-19","2026-03-05","2026-03-19",
   "2026-04-02","2026-04-16","2026-04-30","2026-05-14","2026-05-28","2026-06-11",
@@ -110,6 +112,16 @@ const PAYDAYS = [
   "2026-09-17","2026-10-01","2026-10-15","2026-10-29","2026-11-12","2026-11-26",
   "2026-12-10","2026-12-24"
 ];
+
+// 3. 25년 저축 초기 잔액 (요약 시트 데이터 하드코딩 - API 한계 극복용)
+const INITIAL_SAVINGS = {
+  "체이스 체킹": 9500,
+  "체이스 세이빙": 9292.98,
+  "IRA(2025)": 6976.74,
+  "IRA(2026)": 0,
+  "Varo": 1520.78,
+  "Webull": 16179.56
+};
 
 let state = {
   month: String(new Date().getMonth()+1).padStart(2,"0"),
@@ -124,7 +136,11 @@ async function fetchData() {
     const res = await fetch(API_URL);
     const json = await res.json();
     state.data = json;
-  } catch(e) { console.error(e); }
+  } catch(e) { 
+    console.error(e);
+    document.getElementById("content").innerHTML = '<div class="loading">⚠️ 데이터 연결 실패<br><span style="font-size:12px">새로고침 해주세요</span></div>';
+    return;
+  }
   state.loading = false; render();
 }
 
@@ -136,7 +152,7 @@ function setTab(t) {
 }
 
 function setMonth(m) { state.month = m; render(); }
-function $(n) { return "$" + Number(n).toLocaleString(); }
+function $(n) { return "$" + Number(n).toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0}); }
 
 /* ─── 렌더링 핵심 로직 ─── */
 function render() {
@@ -176,38 +192,42 @@ function render() {
     `;
   } 
   
-  // 2. 예산 탭 (수입 추가, 0원 오류 수정, 중복 제거)
+  // 2. 예산 탭 (수입 분리 표시, Household 포함)
   else if (state.tab === "budget") {
-    const inc = txs.filter(t=>t.t==="수입").reduce((a,b)=>a+b.amt,0);
+    // 수입 분리 로직
+    const incomeTxs = txs.filter(t=>t.t==="수입");
+    const incHomin = incomeTxs.filter(t=>t.pay && t.pay.includes("호민")).reduce((a,b)=>a+b.amt,0);
+    const incSaerom = incomeTxs.filter(t=>t.pay && t.pay.includes("새롬")).reduce((a,b)=>a+b.amt,0);
+    const incTotal = incomeTxs.reduce((a,b)=>a+b.amt,0);
+    const incOther = incTotal - incHomin - incSaerom;
+
+    // 지출 계산
     const expenses = txs.filter(t=>t.t==="지출");
     const spentMap = {};
-    
-    // 지출 합계 계산 (매칭 로직 개선)
     expenses.forEach(t => {
       let key = t.cat.replace("지출_","").replace("고정_","");
       spentMap[key] = (spentMap[key]||0) + t.amt;
-      // Household나 영어 키워드 직접 매칭을 위해 원본 키도 저장
       spentMap[t.cat] = (spentMap[t.cat]||0) + t.amt;
     });
 
-    // 중복(월간 합계, 총합) 제거 필터링
-    const filteredBudget = state.data.budget.filter(b => 
-      !["월간 합계", "총합", "Total"].includes(b.category)
-    );
+    // Household 포함해서 예산 표시
+    const filteredBudget = state.data.budget.filter(b => !["월간 합계", "총합", "Total"].includes(b.category));
 
     content.innerHTML = `
       <div class="card" style="background:#E8F5E9;border-color:#A5D6A7">
-        <div class="card-title">💵 이번 달 수입</div>
-        <div style="font-size:24px;font-weight:800;color:#2E7D32;text-align:center">${$(inc)}</div>
+        <div class="card-title" style="color:#2E7D32">💵 이번 달 수입</div>
+        <div class="income-row"><span>호민 월급</span><span>${$(incHomin)}</span></div>
+        <div class="income-row"><span>새롬 월급</span><span>${$(incSaerom)}</span></div>
+        ${incOther > 0 ? `<div class="income-row"><span>기타 수입</span><span>${$(incOther)}</span></div>` : ''}
+        <div class="income-row"><span>합계</span><span>${$(incTotal)}</span></div>
       </div>
 
       <div class="card">
         <div class="card-title">📉 카테고리별 예산</div>
         ${filteredBudget.map(b => {
-          // 이름 매칭 시도 (한글, 영어, 원본)
           const spent = spentMap[b.category] || spentMap[b.category.replace("지출_","")] || 0;
-          const pct = Math.min((spent/b.target)*100, 100);
-          const info = CAT_MAP[b.category] || b.category; // 이모지 매핑
+          const pct = b.target > 0 ? Math.min((spent/b.target)*100, 100) : 0;
+          const info = CAT_MAP[b.category] || b.category;
           const color = COLOR_MAP[b.category] || "#43AA8B";
           
           return `
@@ -227,8 +247,6 @@ function render() {
   // 3. 내역 탭 (Household, 호콤용돈 이모지 적용)
   else if (state.tab === "history") {
     const expenses = txs.filter(t=>t.t==="지출");
-    
-    // 데이터 가공
     const byCat = groupBy(expenses, t => t.cat.replace("지출_","").replace("고정_",""));
     const byCard = groupBy(expenses, t => t.pay ? t.pay.split("_")[1] || "기타" : "기타");
     const byUser = groupBy(expenses, t => t.pay ? t.pay.split("_")[0] || "공동" : "공동");
@@ -240,106 +258,104 @@ function render() {
           ${renderDonutChart(byCat)}
         </div>
       </div>
-
       <div class="card">
         <div class="card-title">🏆 항목별 지출 순위</div>
         ${renderRanking(byCat, "cat")}
       </div>
-
       <div class="card">
         <div class="card-title">💳 카드별 사용 금액</div>
         ${renderRanking(byCard, "card")}
       </div>
-
       <div class="card">
-        <div class="card-title">👥 사용자별 지출 (나 vs 호콤)</div>
+        <div class="card-title">👥 사용자별 지출</div>
         ${renderRanking(byUser, "user")}
       </div>
     `;
   }
   
-  // 4. 저축 탭 (자동 계산 로직 적용)
+  // 4. 저축 탭 (25년 초기자금 + 26년 저축 = 총 자산)
   else if (state.tab === "savings") {
-    // 가계부 전체 내역에서 '저축' 항목만 모두 가져와 합산 (누적 잔액 계산)
-    // 1. 초기 잔액(시트값) + 2. 거래내역상 저축액
-    // 하지만 시트 구조상 '초기 잔액'만 있을 수 있으므로, 
-    // 여기서는 거래내역의 저축액을 모두 합산하여 보여줍니다.
+    // 26년 누적 저축액 계산 (현재까지의 모든 저축 트랜잭션 합산)
     const allSavingsTxs = state.data.transactions.filter(t => t.t === "저축");
-    const totalAccumulated = allSavingsTxs.reduce((a,b) => a + b.amt, 0);
-    
-    // 계좌별로 분류 (카테고리 이름 기준)
-    const savingsMap = {};
+    const accumulatedSavings26 = {}; // 계좌별 26년 저축액
+
     allSavingsTxs.forEach(t => {
-       // "저축_새롬_varo" -> "새롬_varo" 등으로 매칭하거나, 
-       // 기존 savings 배열에 있는 이름과 매칭 시도
-       let key = t.cat;
-       // 시트의 저축 계좌 목록과 매칭
-       const match = state.data.savings.find(s => t.cat.includes(s.name) || s.name.includes(t.cat));
-       if(match) key = match.name;
-       
-       savingsMap[key] = (savingsMap[key] || 0) + t.amt;
+       // 계좌 이름 매칭 (예: "저축_새롬_varo" -> "Varo")
+       let key = "기타";
+       for(const accName of Object.keys(INITIAL_SAVINGS)) {
+         if(t.cat.toLowerCase().includes(accName.toLowerCase()) || 
+            (t.pay && t.pay.toLowerCase().includes(accName.toLowerCase()))) {
+           key = accName;
+           break;
+         }
+       }
+       // 매칭 실패 시 원본 이름 사용하되, 주요 키워드 포함 시 매칭 시도
+       if(key === "기타") {
+         if(t.cat.includes("Varo")) key = "Varo";
+         else if(t.cat.includes("Webull")) key = "Webull";
+         else if(t.cat.includes("IRA")) key = "IRA(2026)";
+         else if(t.cat.includes("체킹")) key = "체이스 체킹";
+         else if(t.cat.includes("세이빙")) key = "체이스 세이빙";
+       }
+       accumulatedSavings26[key] = (accumulatedSavings26[key] || 0) + t.amt;
+    });
+
+    // 최종 합산 (25년 초기 + 26년 누적)
+    let totalAsset = 0;
+    const finalBalances = [];
+
+    Object.keys(INITIAL_SAVINGS).forEach(acc => {
+      const init = INITIAL_SAVINGS[acc] || 0;
+      const added = accumulatedSavings26[acc] || 0;
+      const current = init + added;
+      totalAsset += current;
+      finalBalances.push({ name: acc, balance: current });
     });
 
     content.innerHTML = `
       <div class="card" style="background:#43AA8B;color:#fff;text-align:center">
-        <div style="font-size:14px;opacity:0.9">💰 현재까지 모은 돈 (누적)</div>
-        <div style="font-size:30px;font-weight:800;margin-top:5px">${$(totalAccumulated)}</div>
+        <div style="font-size:14px;opacity:0.9">💰 총 자산 (25년 이월 포함)</div>
+        <div style="font-size:30px;font-weight:800;margin-top:5px">${$(totalAsset)}</div>
       </div>
       <div class="card">
-        <div class="card-title">🏝️ 계좌별 누적 현황</div>
-        ${Object.entries(savingsMap).length ? Object.entries(savingsMap).map(([name, val]) => `
+        <div class="card-title">🏝️ 계좌별 현재 잔액</div>
+        ${finalBalances.map(s => `
           <div class="rank-row">
-            <div style="font-weight:700;color:#5D4037">${name}</div>
-            <div style="font-weight:800;color:#2E7D32">${$(val)}</div>
+            <div style="font-weight:700;color:#5D4037">${s.name}</div>
+            <div style="font-weight:800;color:#2E7D32">${$(s.balance)}</div>
           </div>
-        `).join("") : '<div style="text-align:center;padding:20px;color:#999">저축 내역이 아직 없습니다.</div>'}
+        `).join("")}
       </div>
     `;
   }
 }
 
 /* ─── 헬퍼 함수들 ─── */
-
-// 달력 그리기
 function renderCalendar(monthStr, txs) {
   const year = 2026;
   const month = parseInt(monthStr) - 1;
   const firstDay = new Date(year, month, 1).getDay();
   const lastDate = new Date(year, month + 1, 0).getDate();
   const todayStr = new Date().toISOString().split("T")[0];
-  
   let html = `<div class="calendar-grid">`;
   ["일","월","화","수","목","금","토"].forEach(d => html += `<div class="cal-day-name">${d}</div>`);
-  
   for(let i=0; i<firstDay; i++) html += `<div></div>`;
-  
   for(let d=1; d<=lastDate; d++) {
     const dateStr = `${year}-${monthStr}-${String(d).padStart(2,"0")}`;
     const isPayday = PAYDAYS.includes(dateStr);
-    const dayTxs = txs.filter(t => t.date && t.date.startsWith(dateStr));
-    const hasExpense = dayTxs.some(t => t.t === "지출");
-    
-    html += `
-      <div class="cal-cell ${dateStr===todayStr?'today':''} ${isPayday?'payday':''}">
-        <span>${d}</span>
-        ${hasExpense ? '<div class="cal-dot" style="background:#FF6B6B"></div>' : ''}
-      </div>`;
+    const hasExpense = txs.some(t => t.date && t.date.startsWith(dateStr) && t.t === "지출");
+    html += `<div class="cal-cell ${dateStr===todayStr?'today':''} ${isPayday?'payday':''}"><span>${d}</span>${hasExpense ? '<div class="cal-dot" style="background:#FF6B6B"></div>' : ''}</div>`;
   }
   html += `</div>`;
   return html;
 }
 
-// 그룹화 및 정렬 함수
 function groupBy(arr, keyFn) {
   const map = {};
-  arr.forEach(t => {
-    const k = keyFn(t);
-    map[k] = (map[k] || 0) + t.amt;
-  });
+  arr.forEach(t => { const k = keyFn(t); map[k] = (map[k] || 0) + t.amt; });
   return Object.entries(map).sort((a,b) => b[1] - a[1]);
 }
 
-// 랭킹 리스트 그리기
 function renderRanking(data, type) {
   if(!data.length) return '<div style="text-align:center;color:#999;padding:10px">내역 없음</div>';
   const max = data[0][1];
@@ -347,53 +363,33 @@ function renderRanking(data, type) {
     let label = key;
     let color = "#43AA8B";
     if(type === "cat") { label = CAT_MAP[key] || key; color = COLOR_MAP[key] || color; }
-    
-    return `
-      <div class="rank-row">
-        <div style="width:80px;font-size:12px;color:#5D4037;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${label}</div>
-        <div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/max)*100}%;background:${color}"></div></div>
-        <div style="width:60px;text-align:right;font-size:12px;font-weight:800">${$(val)}</div>
-      </div>`;
+    return `<div class="rank-row"><div style="width:80px;font-size:12px;color:#5D4037;font-weight:700;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${label}</div><div class="rank-bar-bg"><div class="rank-bar-fill" style="width:${(val/max)*100}%;background:${color}"></div></div><div style="width:60px;text-align:right;font-size:12px;font-weight:800">${$(val)}</div></div>`;
   }).join("");
 }
 
-// 도넛 차트 (SVG)
 function renderDonutChart(data) {
   if(!data.length) return "";
   let total = data.reduce((a,b)=>a+b[1],0);
   let cum = 0;
   const size = 160, r = 70, cx = 80, cy = 80;
-  
   const paths = data.slice(0, 5).map(([key, val]) => {
     const ratio = val / total;
     if(ratio < 0.01) return ""; 
     const startAngle = cum * Math.PI * 2;
     const endAngle = (cum + ratio) * Math.PI * 2;
     cum += ratio;
-    
     const x1 = cx + r * Math.cos(startAngle - Math.PI/2);
     const y1 = cy + r * Math.sin(startAngle - Math.PI/2);
     const x2 = cx + r * Math.cos(endAngle - Math.PI/2);
     const y2 = cy + r * Math.sin(endAngle - Math.PI/2);
-    
     const color = COLOR_MAP[key] || "#ddd";
     const largeArc = ratio > 0.5 ? 1 : 0;
-    
     return `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${largeArc},1 ${x2},${y2} Z" fill="${color}" stroke="#fff" stroke-width="2"/>`;
   });
-
-  return `
-    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-      ${paths.join("")}
-      <circle cx="${cx}" cy="${cy}" r="35" fill="#fff"/>
-      <text x="${cx}" y="${cy+5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#5D4037">Total</text>
-    </svg>`;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${paths.join("")}<circle cx="${cx}" cy="${cy}" r="35" fill="#fff"/><text x="${cx}" y="${cy+5}" text-anchor="middle" font-size="12" font-weight="bold" fill="#5D4037">Total</text></svg>`;
 }
 
-// 초기 실행
 fetchData();
-
-// 🎵 BGM (기존 유지)
 const bgm = new Audio(''); bgm.loop = true;
 document.addEventListener('click', () => { if(bgm.paused) bgm.play(); }, { once: true });
 </script>
