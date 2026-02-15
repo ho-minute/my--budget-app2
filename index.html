@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>🍃 호두네 가계부</title>
-<link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
+<link href="https://script.google.com/macros/s/AKfycbw8SrJhYJwMG0Z7dnxEVEktv33WebDGsP8o5ZJxIbanwaJss75iyrgKlHT1193sYFwm/exec">
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
 body{font-family:'Nanum Gothic',sans-serif;background:#A8E6CF;overflow-x:hidden}
@@ -172,24 +172,28 @@ function render(){
       <div class="card"><div class="card-title">👥 사용자별</div>${renderRanking(byUser,"user")}</div>`;
   }
 
-  // ═══ 저축 (버그2 수정: API 현재 잔액 직접 사용) ═══
+  // ═══ 저축 (월별 총 자산 표시) ═══
   else if(state.tab==="savings"){
     const savings=state.data.savings||[];
     const st=state.data.savingsTotal;
-    const total=st?st.current:savings.reduce((a,s)=>a+(s.balance||0),0);
+    const mk="m"+state.month; // 선택된 월 키 (예: "m01", "m02")
+    
+    // 선택된 월의 총 자산 (해당 월 데이터가 있으면 사용, 없으면 현재 잔액)
+    const monthTotal=st&&st[mk]?st[mk]:st?st.current:savings.reduce((a,s)=>a+(s.balance||0),0);
     const initial=st?st.initial:savings.reduce((a,s)=>a+(s.initial||0),0);
     const goals=state.data.savingsGoals||[];
     const gMap={};goals.forEach(g=>{gMap[g.name]=g.target;});
-    const pct=Math.min((total/20000)*100,100);
+    const pct=Math.min((monthTotal/20000)*100,100);
     const wire=state.data.wire||[];
     const lastW=wire.length>0?wire[wire.length-1]:null;
-    const diff=total-initial;
+    const diff=monthTotal-initial;
+    const mn=parseInt(state.month);
 
     content.innerHTML=`
       <div style="background:linear-gradient(135deg,#43AA8B,#2A9D8F);border-radius:22px;padding:24px;
         margin-bottom:16px;color:#fff;text-align:center;box-shadow:0 4px 14px rgba(42,157,143,0.3)">
-        <div style="font-size:14px;font-weight:700;opacity:0.9">🏝️ 총 자산</div>
-        <div style="font-size:32px;font-weight:800;margin:6px 0">${$(total)}</div>
+        <div style="font-size:14px;font-weight:700;opacity:0.9">🏝️ ${mn}월 총 자산</div>
+        <div style="font-size:32px;font-weight:800;margin:6px 0">${$(monthTotal)}</div>
         <div style="font-size:12px;opacity:0.85">초기 ${$(initial)} → <span style="color:${diff>=0?'#F7DC6F':'#FF8A80'}">${diff>=0?'+':''}${$(diff)}</span></div>
         <div style="font-size:11px;opacity:0.8;margin-top:6px">2026 목표: $20,000 💪</div>
         <div style="height:8px;border-radius:4px;background:rgba(255,255,255,0.2);margin-top:8px;overflow:hidden">
@@ -198,21 +202,20 @@ function render(){
         <div style="font-size:10px;opacity:0.8;margin-top:4px">${pct.toFixed(1)}% 달성</div>
       </div>
 
-      <div class="card"><div class="card-title">🏦 계좌별 현재 잔액</div>
+      <div class="card"><div class="card-title">🏦 ${mn}월 계좌별 현황</div>
         ${savings.map(s=>{
           const icon=SAV_ICON[s.name]||"💰";
           const target=gMap[s.name]||0;
-          const d=(s.balance||0)-(s.initial||0);
-          const ds=d>=0?'+'+$(d):'-'+$(Math.abs(d));
-          const dc=d>=0?'#2E7D32':'#C62828';
+          const mVal=s[mk]||0; // 해당 월 입금/잔액
+          const bal=s.balance||0;
           return`<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px dashed #E8DFC8">
             <div>
               <div style="font-size:14px;font-weight:700;color:#5D4037">${icon} ${s.name}</div>
               <div style="font-size:11px;color:#A1887F;margin-top:2px">초기: ${$(s.initial||0)}${target>0?' · 목표: '+$(target):''}</div>
             </div>
             <div style="text-align:right">
-              <div style="font-size:16px;font-weight:800;color:#5D4037">${$(s.balance||0)}</div>
-              <div style="font-size:11px;font-weight:700;color:${dc}">${ds}</div>
+              <div style="font-size:16px;font-weight:800;color:#5D4037">${mVal>0?$(mVal):$(bal)}</div>
+              ${mVal>0&&mVal!==bal?`<div style="font-size:10px;color:#A1887F">현재: ${$(bal)}</div>`:''}
             </div>
           </div>`;
         }).join("")}
