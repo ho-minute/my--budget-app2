@@ -88,21 +88,21 @@ body{font-family:'Nanum Gothic',sans-serif;background:#A8E6CF;overflow-x:hidden}
 const API_URL = "https://script.google.com/macros/s/AKfycbxar7X9K0bcG7T4Ll0x5CT8U7VwYLD-YT0Cmc2Qy7FqWKKDreN8wciEJlAEBGfplky2/exec";
 const MONTHS = ["01","02","03","04","05","06","07","08","09","10","11","12"];
 
-// 1. 카테고리 & 이모지 매핑 (예산 탭 적용)
+// 1. 카테고리 & 이모지 매핑 (Household, 호콤용돈 추가 완료)
 const CAT_MAP = {
   "Groceries":"🍎 식료품", "Dining":"🍽️ 외식", "Pet":"🐱 호두",
-  "Bill":"📱 공과금", "Rent":"🏠 월세", "생필품":"🧻 생필품",
-  "Gas":"⛽ 주유", "병원":"🏥 병원", "용돈":"💸 용돈",
+  "Bill":"📱 공과금", "Rent":"🏠 월세", "생필품":"🏡 생필품", "Household":"🏡 생필품",
+  "Gas":"⛽ 주유", "병원":"🏥 병원", "용돈":"💸 용돈", "호콤용돈":"🎮 호콤용돈",
   "쇼핑":"🛍️ 쇼핑", "문화생활":"🎬 문화", "기타":"📦 기타"
 };
 const COLOR_MAP = {
   "Groceries":"#FF6B6B", "Dining":"#FFA502", "Pet":"#ECCC68",
-  "Bill":"#70A1FF", "Rent":"#5352ED", "생필품":"#FF7F50",
-  "Gas":"#3742FA", "병원":"#FF4757", "용돈":"#2ED573",
+  "Bill":"#70A1FF", "Rent":"#5352ED", "생필품":"#FF7F50", "Household":"#FF7F50",
+  "Gas":"#3742FA", "병원":"#FF4757", "용돈":"#2ED573", "호콤용돈":"#706FD3",
   "쇼핑":"#E056FD", "문화생활":"#1E90FF", "기타":"#CED6E0"
 };
 
-// 2. 2026년 월급날 데이터 (2주 간격 목요일)
+// 2026년 월급날 (2주 간격 목요일)
 const PAYDAYS = [
   "2026-01-08","2026-01-22","2026-02-05","2026-02-19","2026-03-05","2026-03-19",
   "2026-04-02","2026-04-16","2026-04-30","2026-05-14","2026-05-28","2026-06-11",
@@ -154,7 +154,7 @@ function render() {
 
   const txs = state.data.transactions.filter(t => t.m === state.month);
   
-  // 1. 홈 탭 (위치 변경됨: 현황 위로, 달력 아래로)
+  // 1. 홈 탭 (현황 위로, 달력 아래로)
   if (state.tab === "home") {
     const inc = txs.filter(t=>t.t==="수입").reduce((a,b)=>a+b.amt,0);
     const exp = txs.filter(t=>t.t==="지출").reduce((a,b)=>a+b.amt,0);
@@ -176,21 +176,36 @@ function render() {
     `;
   } 
   
-  // 2. 예산 탭 (이모지 적용)
+  // 2. 예산 탭 (수입 추가, 0원 오류 수정, 중복 제거)
   else if (state.tab === "budget") {
+    const inc = txs.filter(t=>t.t==="수입").reduce((a,b)=>a+b.amt,0);
     const expenses = txs.filter(t=>t.t==="지출");
     const spentMap = {};
+    
+    // 지출 합계 계산 (매칭 로직 개선)
     expenses.forEach(t => {
-      // 카테고리 매핑 (지출_Groceries -> Groceries)
       let key = t.cat.replace("지출_","").replace("고정_","");
       spentMap[key] = (spentMap[key]||0) + t.amt;
+      // Household나 영어 키워드 직접 매칭을 위해 원본 키도 저장
+      spentMap[t.cat] = (spentMap[t.cat]||0) + t.amt;
     });
 
+    // 중복(월간 합계, 총합) 제거 필터링
+    const filteredBudget = state.data.budget.filter(b => 
+      !["월간 합계", "총합", "Total"].includes(b.category)
+    );
+
     content.innerHTML = `
+      <div class="card" style="background:#E8F5E9;border-color:#A5D6A7">
+        <div class="card-title">💵 이번 달 수입</div>
+        <div style="font-size:24px;font-weight:800;color:#2E7D32;text-align:center">${$(inc)}</div>
+      </div>
+
       <div class="card">
         <div class="card-title">📉 카테고리별 예산</div>
-        ${state.data.budget.map(b => {
-          const spent = spentMap[b.category] || 0;
+        ${filteredBudget.map(b => {
+          // 이름 매칭 시도 (한글, 영어, 원본)
+          const spent = spentMap[b.category] || spentMap[b.category.replace("지출_","")] || 0;
           const pct = Math.min((spent/b.target)*100, 100);
           const info = CAT_MAP[b.category] || b.category; // 이모지 매핑
           const color = COLOR_MAP[b.category] || "#43AA8B";
@@ -209,7 +224,7 @@ function render() {
       </div>`;
   }
   
-  // 3. 내역 탭 (차트 + 카드별 + 사용자별 분석)
+  // 3. 내역 탭 (Household, 호콤용돈 이모지 적용)
   else if (state.tab === "history") {
     const expenses = txs.filter(t=>t.t==="지출");
     
@@ -243,22 +258,41 @@ function render() {
     `;
   }
   
-  // 4. 저축 탭 (와이어바일리 제거)
+  // 4. 저축 탭 (자동 계산 로직 적용)
   else if (state.tab === "savings") {
-    const total = state.data.savings.reduce((a,b)=>a+b.balance,0);
+    // 가계부 전체 내역에서 '저축' 항목만 모두 가져와 합산 (누적 잔액 계산)
+    // 1. 초기 잔액(시트값) + 2. 거래내역상 저축액
+    // 하지만 시트 구조상 '초기 잔액'만 있을 수 있으므로, 
+    // 여기서는 거래내역의 저축액을 모두 합산하여 보여줍니다.
+    const allSavingsTxs = state.data.transactions.filter(t => t.t === "저축");
+    const totalAccumulated = allSavingsTxs.reduce((a,b) => a + b.amt, 0);
+    
+    // 계좌별로 분류 (카테고리 이름 기준)
+    const savingsMap = {};
+    allSavingsTxs.forEach(t => {
+       // "저축_새롬_varo" -> "새롬_varo" 등으로 매칭하거나, 
+       // 기존 savings 배열에 있는 이름과 매칭 시도
+       let key = t.cat;
+       // 시트의 저축 계좌 목록과 매칭
+       const match = state.data.savings.find(s => t.cat.includes(s.name) || s.name.includes(t.cat));
+       if(match) key = match.name;
+       
+       savingsMap[key] = (savingsMap[key] || 0) + t.amt;
+    });
+
     content.innerHTML = `
       <div class="card" style="background:#43AA8B;color:#fff;text-align:center">
-        <div style="font-size:14px;opacity:0.9">총 자산</div>
-        <div style="font-size:30px;font-weight:800;margin-top:5px">${$(total)}</div>
+        <div style="font-size:14px;opacity:0.9">💰 현재까지 모은 돈 (누적)</div>
+        <div style="font-size:30px;font-weight:800;margin-top:5px">${$(totalAccumulated)}</div>
       </div>
       <div class="card">
-        <div class="card-title">🏝️ 계좌별 현황</div>
-        ${state.data.savings.map(s => `
+        <div class="card-title">🏝️ 계좌별 누적 현황</div>
+        ${Object.entries(savingsMap).length ? Object.entries(savingsMap).map(([name, val]) => `
           <div class="rank-row">
-            <div style="font-weight:700;color:#5D4037">${s.name}</div>
-            <div style="font-weight:800;color:#2E7D32">${$(s.balance)}</div>
+            <div style="font-weight:700;color:#5D4037">${name}</div>
+            <div style="font-weight:800;color:#2E7D32">${$(val)}</div>
           </div>
-        `).join("")}
+        `).join("") : '<div style="text-align:center;padding:20px;color:#999">저축 내역이 아직 없습니다.</div>'}
       </div>
     `;
   }
